@@ -1,0 +1,194 @@
+version: "3"
+
+services:
+#
+# socketio notification conf
+#
+  rameses-notification-server:
+    image: ramesesinc/notification-server:1.0
+    container_name: rameses-notification-server
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    ports: 
+      - "7080:8080"
+
+
+#
+# email sms conf
+#
+  email-sms-server: 
+    image: ramesesinc/email-sms-server:latest
+    container_name: email-sms-server
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    environment:
+      sms_host: ${SMS_HOST}
+      mail_smtp_host: ${HOST_IP}
+      MAIL_RELAY_HOST: smtp.gmail.com
+      MAIL_RELAY_PORT: 587
+      MAIL_RELAY_USER: filipizenmailer@gmail.com
+      MAIL_RELAY_PASS: rameses1234
+
+    ports:
+      - "25:25"
+      - "8100:8070"
+
+    volumes:
+      - ./email-sms/connections:/apps/server/services/apps/emailsms/connections
+      - ./email-sms/modules:/apps/server/services/apps/emailsms/modules
+
+
+#
+# Download Server Conf
+#
+  download-server:
+    image: nginx:latest
+    container_name: download-server
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    environment:
+      TZ: "Asia/Manila"
+
+    ports:
+      - "8000:80"
+
+    volumes:
+      - ./download/conf.d:/etc/nginx/conf.d
+      - ./download/static:/static
+
+
+#
+# ETRACS Server Conf
+#
+  etracs25-server:
+    image: ramesesinc/tanjay-etracs25-server:20191011c
+    container_name: etracs25-server
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    environment:
+      TZ: "Asia/Manila"
+      app_server_ip: ${HOST_IP}
+      dbserver_host: ${DBSERVER_HOST}
+      dbserver_user: ${DBSERVER_USER}
+      dbserver_pass: ${DBSERVER_PASS}
+      cloud_ws_host: ${CLOUD_WS_HOST}
+      cloud_host: ${CLOUD_HOST}
+      gdx_host: ${HOST_IP}:9070
+
+    ports:
+      - "8060:8060"
+      - "8061:8061"
+      - "8070:8070"
+      - "8080:8080"
+
+    volumes:
+      - ./etracs25/datasources:/apps/server/workspace/services/datasources
+      - ./etracs25/adapters:/apps/server/workspace/services/apps/etracs25/adapters
+      - ./etracs25/connections:/apps/server/workspace/services/apps/etracs25/connections
+      - ./etracs25/modules:/apps/server/workspace/services/apps/etracs25/modules
+
+
+#
+# market server Conf
+#
+  local-market-server:
+    image: ramesesinc/local-market-server:v001
+    container_name: local-market-server
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    environment: 
+      app_server_ip: ${HOST_IP}
+      dbserver_host: ${DBSERVER_HOST}
+      dbserver_user: ${DBSERVER_USER}
+      dbserver_pass: ${DBSERVER_PASS}
+
+    ports:
+      - "8074:8070"
+
+    volumes:
+      - ./market/marketds:/apps/server/services/datasources/mainds
+      - ./market/connections:/apps/server/services/apps/enterprise/connections
+      - ./market/modules/rameses-gov-etracs-market-services.jar:/apps/server/services/apps/enterprise/modules/rameses-gov-etracs-market-services.jar
+
+
+#
+# obo server Conf
+#
+  local-obo-server:
+    image: ramesesinc/local-obo-server:v001
+    container_name: local-obo-server
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    environment: 
+      app_server_ip: ${HOST_IP}
+      dbserver_host: ${DBSERVER_HOST}
+      dbserver_user: ${DBSERVER_USER}
+      dbserver_pass: ${DBSERVER_PASS}
+
+    ports:
+      - "8073:8070"
+
+    volumes:
+      - ./local-obo/mainds:/apps/server/services/datasources/mainds
+      - ./local-obo/connections:/apps/server/services/apps/enterprise/connections
+
+
+#
+# queue server Conf
+#
+  queue-server:
+    image: ramesesinc/queue-server:20191010
+    container_name: queue-server
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    depends_on: 
+      - etracs25-server
+      
+    links: 
+      - etracs25-server
+
+    environment:
+      app_server_ip: ${HOST_IP}
+
+    ports:
+      - "9999:8080"
+      - "9970:8070"
+
+    volumes:
+      - ./queue/connections/ws_queue_listener:/apps/server/workspace/services/apps/queue/connections/ws_queue_listener
+      - ./queue/project.conf:/apps/server/workspace/web/monitor.queue/project.conf

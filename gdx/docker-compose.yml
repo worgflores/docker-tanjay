@@ -1,0 +1,34 @@
+version: "3"
+
+services:
+
+#
+# GDX Client Conf
+#
+  gdx-client:
+    image: ramesesinc/gdx-client:latest
+    container_name: gdx-client
+
+    logging: 
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+    environment:
+      TZ: "Asia/Manila"
+      cloud_ip: ${CLOUD_IP}
+      app_server_ip: ${HOST_IP}
+      rabbitmq_host: ${CLOUD_IP}
+      gdx_cloud_host: ${GDX_CLOUD_HOST}
+      gdx_cloud_queue: ${GDX_CLOUD_QUEUE}
+      gdx_notifier_host: ${CLOUD_IP}:9001
+      local_etracs_host: ${HOST_IP}:8070
+
+    ports:
+      - "8571:8571"
+
+    volumes:
+      - ./gdx-client/connections:/apps/server/apps/gdx/connections
+      - ./gdx-client/modules:/apps/server/apps/gdx/modules
+      - ./gdx-client/modules.conf:/apps/server/apps/gdx/modules.conf
